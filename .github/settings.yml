@@ -168,7 +168,7 @@ labels:
 # Collaborators: give specific users access to this repository.
 # See https://docs.github.com/en/rest/reference/repos#add-a-repository-collaborator for available options
 collaborators:
-  - username: tbavaliya
+  - username: tapanbavaliya
     permission: admin
   - username: zeelrupapara
     permission: push
