@@ -169,9 +169,11 @@ labels:
 # See https://docs.github.com/en/rest/reference/repos#add-a-repository-collaborator for available options
 collaborators:
   - username: tbavaliya
-    permission: maintain
+    permission: admin
   - username: zeelrupapara
     permission: push
+  - username: munir131
+    permission: admin    
 
   # Note: `permission` is only valid on organization-owned repositories.
   # The permission to grant the collaborator. Can be one of:
