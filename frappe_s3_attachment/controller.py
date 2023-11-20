@@ -253,6 +253,7 @@ def file_upload_to_s3(doc, method):
             frappe.db.set_value(parent_doctype, parent_name, frappe.get_meta(parent_doctype).get('image_field'), file_url)
 
         frappe.db.commit()
+        doc.reload()
 
 @frappe.whitelist()
 def generate_file(key=None, file_name=None):
