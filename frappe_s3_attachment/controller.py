@@ -1,16 +1,20 @@
 from __future__ import unicode_literals
 
-import random
-import string
 import datetime
-import re
 import os
+import random
+import re
+import string
 
 import boto3
-import magic
+
+from botocore.client import Config
+from botocore.exceptions import ClientError
+
 import frappe
 
-from botocore.exceptions import ClientError
+
+import magic
 
 
 class S3Operations(object):
@@ -33,9 +37,14 @@ class S3Operations(object):
                 aws_access_key_id=self.s3_settings_doc.aws_key,
                 aws_secret_access_key=self.s3_settings_doc.aws_secret,
                 region_name=self.s3_settings_doc.region_name,
+                config=Config(signature_version='s3v4')
             )
         else:
-            self.S3_CLIENT = boto3.client('s3')
+            self.S3_CLIENT = boto3.client(
+                's3',
+                region_name=self.s3_settings_doc.region_name,
+                config=Config(signature_version='s3v4')
+            )
         self.BUCKET = self.s3_settings_doc.bucket_name
         self.folder_name = self.s3_settings_doc.folder_name
 
@@ -77,15 +86,6 @@ class S3Operations(object):
         day = today.strftime("%d")
 
         doc_path = None
-        try:
-            doc_path = frappe.db.get_value(
-                parent_doctype,
-                filters={'name': parent_name},
-                fieldname=['s3_folder_path']
-            )
-            doc_path = doc_path.rstrip('/').lstrip('/')
-        except Exception as e:
-            print(e)
 
         if not doc_path:
             if self.folder_name:
@@ -147,15 +147,16 @@ class S3Operations(object):
         )
 
         if self.s3_settings_doc.delete_file_from_cloud:
-            S3_CLIENT = boto3.client(
+            s3_client = boto3.client(
                 's3',
                 aws_access_key_id=self.s3_settings_doc.aws_key,
                 aws_secret_access_key=self.s3_settings_doc.aws_secret,
                 region_name=self.s3_settings_doc.region_name,
+                config=Config(signature_version='s3v4')
             )
 
             try:
-                S3_CLIENT.delete_object(
+                s3_client.delete_object(
                     Bucket=self.s3_settings_doc.bucket_name,
                     Key=key
                 )
@@ -204,7 +205,7 @@ def file_upload_to_s3(doc, method):
     s3_upload = S3Operations()
     path = doc.file_url
     site_path = frappe.utils.get_site_path()
-    parent_doctype = doc.attached_to_doctype
+    parent_doctype = doc.attached_to_doctype or 'File'
     parent_name = doc.attached_to_name
     ignore_s3_upload_for_doctype = frappe.local.conf.get('ignore_s3_upload_for_doctype') or ['Data Import']
     if parent_doctype not in ignore_s3_upload_for_doctype:
@@ -228,11 +229,13 @@ def file_upload_to_s3(doc, method):
                 key
             )
         os.remove(file_path)
-        doc = frappe.db.sql("""UPDATE `tabFile` SET file_url=%s, folder=%s,
+        frappe.db.sql("""UPDATE `tabFile` SET file_url=%s, folder=%s,
             old_parent=%s, content_hash=%s WHERE name=%s""", (
             file_url, 'Home/Attachments', 'Home/Attachments', key, doc.name))
-
-        if frappe.get_meta(parent_doctype).get('image_field'):
+        
+        doc.file_url = file_url
+        
+        if parent_doctype and frappe.get_meta(parent_doctype).get('image_field'):
             frappe.db.set_value(parent_doctype, parent_name, frappe.get_meta(parent_doctype).get('image_field'), file_url)
 
         frappe.db.commit()
