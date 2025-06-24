@@ -9,7 +9,6 @@ import string
 import time
 
 import boto3
-
 from urllib.parse import urlparse
 from botocore.client import Config
 from botocore.exceptions import ClientError
